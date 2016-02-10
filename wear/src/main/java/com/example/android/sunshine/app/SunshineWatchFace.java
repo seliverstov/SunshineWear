@@ -1,18 +1,3 @@
-/*
- * Copyright (C) 2014 The Android Open Source Project
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 
 package com.example.android.sunshine.app;
 
@@ -65,8 +50,7 @@ import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Digital watch face with seconds. In ambient mode, the seconds aren't displayed. On devices with
- * low-bit ambient mode, the text is drawn without anti-aliasing in ambient mode.
+ * Created by a.g.seliverstov on 10.02.2016.
  */
 public class SunshineWatchFace extends CanvasWatchFaceService {
     private static final String TAG = SunshineWatchFace.class.getSimpleName();
@@ -75,19 +59,13 @@ public class SunshineWatchFace extends CanvasWatchFaceService {
     public static final String KEY_TEMPERATURE_LOW = "KEY_TEMPERATURE_LOW";
     public static final String KEY_WEATHER_ICON = "KEY_WEATHER_ICON";
     public static final String KEY_TIMESTAMP = "KEY_TIMESTAMP";
+    public static final String DATA_API_PATH = "/SunshineWatchFace/weather";
 
     private static final Typeface NORMAL_TYPEFACE = Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL);
     private static final Typeface BOLD_TYPEFACE = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD);
 
-    /**
-     * Update rate in milliseconds for interactive mode. We update once a second since seconds are
-     * displayed in interactive mode.
-     */
     private static final long INTERACTIVE_UPDATE_RATE_MS = TimeUnit.SECONDS.toMillis(1);
 
-    /**
-     * Handler message id for updating the time periodically in interactive mode.
-     */
     private static final int MSG_UPDATE_TIME = 0;
     public static final String TIME_FORMAT = "%d:%02d";
     public static final String DATE_FORMAT = "EE, MMM dd yyyy";
@@ -145,10 +123,6 @@ public class SunshineWatchFace extends CanvasWatchFaceService {
 
         GoogleApiClient mGoogleApiClient;
 
-        /**
-         * Whether the display supports fewer bits for each color in ambient mode. When true, we
-         * disable anti-aliasing in ambient mode.
-         */
         boolean mLowBitAmbient;
 
         @Override
@@ -210,7 +184,6 @@ public class SunshineWatchFace extends CanvasWatchFaceService {
             if (visible) {
                 registerReceiver();
                 mGoogleApiClient.connect();
-                // Update time zone in case it changed while we weren't visible.
                 mTime.clear(TimeZone.getDefault().getID());
                 mTime.setToNow();
             } else {
@@ -221,8 +194,6 @@ public class SunshineWatchFace extends CanvasWatchFaceService {
                 unregisterReceiver();
             }
 
-            // Whether the timer should be running depends on whether we're visible (as well as
-            // whether we're in ambient mode), so we may need to start or stop the timer.
             updateTimer();
         }
 
@@ -247,7 +218,6 @@ public class SunshineWatchFace extends CanvasWatchFaceService {
         public void onApplyWindowInsets(WindowInsets insets) {
             super.onApplyWindowInsets(insets);
 
-            // Load resources that have alternate values for round watches.
             Resources resources = SunshineWatchFace.this.getResources();
             boolean isRound = insets.isRound();
 
@@ -257,7 +227,6 @@ public class SunshineWatchFace extends CanvasWatchFaceService {
             mDatePaint.setTextSize(resources.getDimension(R.dimen.digital_date_text_size));
             mHighTemperaturePaint.setTextSize(resources.getDimension(R.dimen.digital_temperature_text_size));
             mLowTemperaturePaint.setTextSize(resources.getDimension(R.dimen.digital_temperature_text_size));
-            //mXOffset = resources.getDimension(isRound ? R.dimen.digital_x_offset_round : R.dimen.digital_x_offset);
         }
 
         @Override
@@ -280,12 +249,11 @@ public class SunshineWatchFace extends CanvasWatchFaceService {
                 if (mLowBitAmbient) {
                     mTimePaint.setAntiAlias(!inAmbientMode);
                     mDatePaint.setAntiAlias(!inAmbientMode);
+                    mHighTemperaturePaint.setAntiAlias(!inAmbientMode);
+                    mLowTemperaturePaint.setAntiAlias(!inAmbientMode);
                 }
                 invalidate();
             }
-
-            // Whether the timer should be running depends on whether we're visible (as well as
-            // whether we're in ambient mode), so we may need to start or stop the timer.
             updateTimer();
         }
 
@@ -320,10 +288,6 @@ public class SunshineWatchFace extends CanvasWatchFaceService {
 
         }
 
-        /**
-         * Starts the {@link #mUpdateTimeHandler} timer if it should be running and isn't currently
-         * or stops it if it shouldn't be running but currently is.
-         */
         private void updateTimer() {
             mUpdateTimeHandler.removeMessages(MSG_UPDATE_TIME);
             if (shouldTimerBeRunning()) {
@@ -331,17 +295,10 @@ public class SunshineWatchFace extends CanvasWatchFaceService {
             }
         }
 
-        /**
-         * Returns whether the {@link #mUpdateTimeHandler} timer should be running. The timer should
-         * only run when we're visible and in interactive mode.
-         */
         private boolean shouldTimerBeRunning() {
             return isVisible() && !isInAmbientMode();
         }
 
-        /**
-         * Handle updating the time periodically in interactive mode.
-         */
         private void handleUpdateTimeMessage() {
             invalidate();
             if (shouldTimerBeRunning()) {
@@ -353,6 +310,7 @@ public class SunshineWatchFace extends CanvasWatchFaceService {
         }
 
         protected void processDataItem(DataItem dataItem){
+            if (!dataItem.getUri().getPath().equals(DATA_API_PATH)) return;
             DataMapItem dataMapItem = DataMapItem.fromDataItem(dataItem);
             Asset iconAsset = dataMapItem.getDataMap().getAsset(KEY_WEATHER_ICON);
 
@@ -385,7 +343,6 @@ public class SunshineWatchFace extends CanvasWatchFaceService {
 
         @Override
         public void onDataChanged(DataEventBuffer dataEvents) {
-            Log.i(TAG, "onDataChanged");
             for (DataEvent event:dataEvents) {
                 processDataItem(event.getDataItem());
             }
@@ -394,12 +351,11 @@ public class SunshineWatchFace extends CanvasWatchFaceService {
 
         @Override
         public void onConnected(Bundle bundle) {
-            Log.i(TAG, "onConnected: " + bundle);
             Wearable.DataApi.addListener(mGoogleApiClient, this);
             Wearable.DataApi.getDataItems(mGoogleApiClient).setResultCallback(new ResultCallback<DataItemBuffer>() {
                 @Override
                 public void onResult(DataItemBuffer dataItems) {
-                    for(DataItem dataItem:dataItems){
+                    for (DataItem dataItem : dataItems) {
                         processDataItem(dataItem);
                     }
                 }

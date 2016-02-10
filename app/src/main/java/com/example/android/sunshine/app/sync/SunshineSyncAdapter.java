@@ -66,6 +66,7 @@ public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter {
     public static final String KEY_TEMPERATURE_LOW = "KEY_TEMPERATURE_LOW";
     public static final String KEY_WEATHER_ICON = "KEY_WEATHER_ICON";
     public static final String KEY_TIMESTAMP = "KEY_TIMESTAMP";
+    public static final String DATA_API_PATH = "/SunshineWatchFace/weather";
 
 
     public final String LOG_TAG = SunshineSyncAdapter.class.getSimpleName();
@@ -553,7 +554,7 @@ public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter {
 
 
 
-            PutDataMapRequest request = PutDataMapRequest.create("/weather");
+            PutDataMapRequest request = PutDataMapRequest.create(DATA_API_PATH);
             DataMap data = request.getDataMap();
             data.putLong(KEY_TIMESTAMP, System.currentTimeMillis());
             data.putString(KEY_TEMPERATURE_HIGH, Utility.formatTemperature(context, high));
@@ -563,10 +564,9 @@ public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter {
                 largeIcon.compress(Bitmap.CompressFormat.PNG, 100, byteStream);
                 data.putAsset(KEY_WEATHER_ICON, Asset.createFromBytes(byteStream.toByteArray()));
             }
-            Log.i(LOG_TAG, "Generating DataItem: " + request);
+
             if (!mGoogleApiClient.isConnected()) {
                 mGoogleApiClient.connect();
-                Log.i(LOG_TAG, "mGoogleApiClient.isConnected(): " + mGoogleApiClient.isConnected());;
             }
             request.setUrgent();
             PutDataRequest putDataRequest = request.asPutDataRequest();
@@ -578,7 +578,6 @@ public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter {
                             if (!dataItemResult.getStatus().isSuccess()) {
                                 Log.e(LOG_TAG, "ERROR: failed to putDataItem, status code: " + dataItemResult.getStatus().getStatusCode());
                             }
-                            Log.i(LOG_TAG,"DataItemResult: "+dataItemResult);
                         }
                     });
             Log.i(LOG_TAG, "Current weather: "+Utility.formatTemperature(context, high)+", "+Utility.formatTemperature(context, low));
